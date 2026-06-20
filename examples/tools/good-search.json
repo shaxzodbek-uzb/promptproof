@@ -1,0 +1,22 @@
+{
+  "name": "search_documents",
+  "description": "Use when the user wants to find documents by keyword, filter by a date range, or page through large result sets.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The full-text search query. Words are matched case-insensitively."
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Maximum number of results to return. Defaults to 20, capped at 100."
+      },
+      "since": {
+        "type": "string",
+        "description": "Optional ISO-8601 date; only documents modified on or after it are returned."
+      }
+    },
+    "required": ["query"]
+  }
+}

@@ -1,0 +1,70 @@
+name: promptproof
+description: >-
+  Fast, deterministic, zero-API linter for AI agent prompt assets — SKILL.md,
+  sub-agents, MCP tool descriptions, slash commands, and system prompts.
+author: Shaxzodbek Qambaraliyev
+
+branding:
+  icon: check-circle
+  color: purple
+
+inputs:
+  paths:
+    description: Files or directories to lint (space-separated).
+    required: false
+    default: "."
+  fail-level:
+    description: Minimum severity that fails the build (error, warning, info).
+    required: false
+    default: warning
+  select:
+    description: Comma-separated rule ids/categories to run (empty = all).
+    required: false
+    default: ""
+  ignore:
+    description: Comma-separated rule ids/categories to skip.
+    required: false
+    default: ""
+  version:
+    description: promptproof version to install (empty = latest).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install promptproof
+      shell: bash
+      run: |
+        if [ -n "${VERSION}" ]; then
+          python -m pip install --disable-pip-version-check "promptproof==${VERSION}"
+        else
+          python -m pip install --disable-pip-version-check promptproof
+        fi
+      env:
+        VERSION: ${{ inputs.version }}
+
+    - name: Run promptproof
+      shell: bash
+      run: |
+        args=(--format github --fail-level "${FAIL_LEVEL}")
+        if [ -n "${SELECT}" ]; then
+          args+=(--select "${SELECT}")
+        fi
+        if [ -n "${IGNORE}" ]; then
+          args+=(--ignore "${IGNORE}")
+        fi
+        # PATHS is space-separated and intentionally word-split into args.
+        # shellcheck disable=SC2206
+        paths=(${PATHS})
+        promptproof "${args[@]}" "${paths[@]}"
+      env:
+        PATHS: ${{ inputs.paths }}
+        FAIL_LEVEL: ${{ inputs.fail-level }}
+        SELECT: ${{ inputs.select }}
+        IGNORE: ${{ inputs.ignore }}

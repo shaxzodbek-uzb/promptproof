@@ -1,0 +1,31 @@
+# Example promptproof configuration.
+#
+# promptproof searches upward from each linted file for `.promptproof.toml`
+# (or a [tool.promptproof] table in pyproject.toml). Every key below is
+# optional — with no config file you get sensible, low-false-positive defaults.
+# See `promptproof rules` for the full rule list and `promptproof explain PPID`
+# for any rule's rationale.
+
+# Exit non-zero only when a finding is at this severity or above.
+# One of: error | warning | info. Default: warning.
+fail-level = "warning"
+
+# Skip these rules entirely, by id or by category slug
+# (clarity, consistency, economy, triggering, structure, safety).
+# Here we silence two stylistic INFO rules we don't care about.
+ignore = ["PP102", "PP507"]
+
+# Per-rule severity overrides (rule id -> error | warning | info).
+[severity]
+# Treat a missing description as a hard error in this project.
+PP401 = "error"
+# Demote politeness padding from warning to info.
+PP301 = "info"
+
+# Threshold overrides. Keys mirror promptproof's DEFAULTS; dotted keys are
+# quoted because TOML treats a bare dot as table nesting.
+[thresholds]
+# Require richer descriptions than the 40-char default.
+description_min_chars = 60
+# Give SKILL.md bodies a tighter token budget than the 5000 default.
+"token_budget.skill" = 4000

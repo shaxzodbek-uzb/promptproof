@@ -1,0 +1,68 @@
+[project]
+name = "promptproof"
+version = "0.1.0"
+description = "Fast, deterministic, zero-API linter for AI agent prompt assets — SKILL.md, sub-agents, MCP tool descriptions, slash commands, and system prompts. Catch weak triggers, contradictions, token bloat, and broken frontmatter before they ship."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Shaxzodbek Qambaraliyev", email = "shaxzodbek@blaze.uz" }]
+keywords = [
+    "linter", "prompt", "prompt-engineering", "mcp", "claude", "claude-code",
+    "skills", "skill", "agent", "agents", "subagent", "ci", "static-analysis",
+    "agentskills", "prompt-lint",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The core is intentionally dependency-free: it must run as a fast pre-commit hook
+# with zero network and zero install friction. Everything optional is an extra.
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
+mcp = ["mcp>=1.2"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/shaxzodbek-uzb/promptproof"
+Repository = "https://github.com/shaxzodbek-uzb/promptproof"
+Issues = "https://github.com/shaxzodbek-uzb/promptproof/issues"
+Changelog = "https://github.com/shaxzodbek-uzb/promptproof/blob/main/CHANGELOG.md"
+
+[project.scripts]
+promptproof = "promptproof.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["promptproof"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Severity/DocKind intentionally use the (str, Enum) pattern for stable str() semantics
+# and JSON round-tripping; StrEnum would change str(DocKind.SKILL) to "skill".
+ignore = ["UP042"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+# Config applied when promptproof lints this repo's own example assets (CI dogfood job).
+[tool.promptproof]
+fail-level = "warning"

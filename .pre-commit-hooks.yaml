@@ -1,0 +1,15 @@
+- id: promptproof
+  name: promptproof
+  description: >-
+    Lint AI agent prompt assets (SKILL.md, sub-agents, MCP tool descriptions,
+    slash commands, system prompts) — deterministic, zero-API, no network.
+  entry: promptproof
+  language: python
+  # Default to AGENT prompt assets only — SKILL.md anywhere, files under .claude/, and
+  # *.prompt — so the hook never blocks a commit on ordinary prose (a README that says
+  # "please"). To lint all prompts/docs, override `files` in your .pre-commit-config.yaml,
+  # e.g. files: '\.(md|markdown|txt|prompt)$'.
+  types_or: [markdown, text]
+  files: '(^|/)SKILL\.md$|(^|/)\.claude/.*\.(md|markdown)$|\.prompt$'
+  pass_filenames: true
+  require_serial: false
