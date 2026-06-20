@@ -28,13 +28,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install package + dev deps
-        run: uv pip install --system -e '.[dev]'
+        run: |
+          uv venv
+          uv pip install -e '.[dev]'
 
       - name: Lint (ruff)
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Test (pytest)
-        run: pytest -q
+        run: uv run pytest -q
 
   dogfood:
     name: dogfood
@@ -48,12 +50,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install package
-        run: uv pip install --system -e .
+        run: |
+          uv venv
+          uv pip install -e .
 
       # good-skill is clean and MUST pass at warning+.
       - name: Lint examples/good-skill (must pass)
-        run: promptproof examples/good-skill --fail-level warning
+        run: uv run promptproof examples/good-skill --fail-level warning
 
       # bad-skill is a showcase of findings; never fail the build on it.
       - name: Lint examples/bad-skill (showcase, never fails)
-        run: promptproof examples/bad-skill --exit-zero
+        run: uv run promptproof examples/bad-skill --exit-zero
