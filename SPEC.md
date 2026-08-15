@@ -344,6 +344,12 @@ Default-command options:
 - `--fail-level {error,warning,info}` override exit threshold (default from config: warning).
 - `--exit-zero` always exit 0 (report only).
 - `--no-summary`, `--quiet` (errors only, suppress info), `--no-color` / `--color`.
+- `--fix` apply every finding's mechanical repair and rewrite the files in place;
+  `--diff` prints the unified diff `--fix` would apply and writes nothing. Both refuse
+  stdin (exit 2) — there is no file to rewrite.
+- `--baseline [PATH]` suppress findings recorded in a baseline file (default
+  `.promptproof-baseline.json`); `--write-baseline [PATH]` record the current findings
+  and exit 0. A missing or malformed baseline is exit 2, never a silent pass.
 
 Exit codes:
 - `0`: no findings at/above fail-level (or `--exit-zero`).
@@ -537,13 +543,24 @@ green `pytest` on 3.11-3.13.
 
 ```python
 __all__ = [
-    "Severity", "Location", "Finding", "DocKind", "Document",
+    "Severity", "Location", "Finding", "Edit", "DocKind", "Document",
     "Config", "load_config",
-    "lint_text", "lint_file", "lint_paths", "discover",
+    "lint_text", "lint_file", "lint_paths", "discover", "exit_code",
+    "fix_text", "fix_file", "FixResult",
+    "Baseline", "BaselineError",
     "render", "all_rules", "get_rule", "estimate_tokens", "__version__",
 ]
 __version__ = "0.1.0"
 ```
+
+`Finding.fix` is an `Edit | None`: a 1-based inclusive line range and its replacement
+lines (empty = delete). A rule attaches one **only** when the repair is unambiguous;
+anything requiring judgement about author intent stays a hint. Fixes are applied
+bottom-up, non-overlapping, and re-linted until the text stops changing.
+
+Baseline entries are keyed on `(path, rule, hash(triggering line))` — never on line
+numbers, which would invalidate the whole file on any insertion — with per-key counts so
+a known quantity of a finding is accepted rather than the finding forever.
 
 ---
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Iterable
+from dataclasses import replace
 
 from .config import Config
 from .document import DocKind, Document
@@ -125,7 +126,9 @@ def lint_document(doc: Document, config: Config | None = None) -> list[Finding]:
     if config.severity:
         findings = [
             f if f.rule not in config.severity
-            else Finding(f.rule, f.name, config.severity[f.rule], f.message, f.location, f.hint)
+            # dataclasses.replace, so a field added later can't be silently dropped here
+            # the way `fix` would have been by a positional rebuild.
+            else replace(f, severity=config.severity[f.rule])
             for f in findings
         ]
     findings = _apply_suppressions(findings, doc)

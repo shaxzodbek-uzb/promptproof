@@ -16,7 +16,7 @@ import re
 from collections.abc import Iterable
 
 from ..document import DocKind, Document
-from ..finding import Finding, Severity
+from ..finding import Edit, Finding, Severity
 from .base import (
     Context,
     Rule,
@@ -61,6 +61,18 @@ _FILLER = re.compile(
 )
 _REWRITE_BY_PHRASE = {phrase: rewrite for phrase, rewrite in _FILLER_REWRITES}
 
+# The literal substitution ``--fix`` applies. Separate from the human-facing hints above,
+# which are advice ("drop it, or just say ...") rather than something to paste in.
+_FILLER_REPLACEMENT: dict[str, str] = {
+    "it is important to note that": "",
+    "at the end of the day": "",
+    "as a matter of fact": "",
+    "due to the fact that": "because",
+    "please note that": "",
+    "needless to say": "",
+    "in order to": "to",
+}
+
 # PP306: decorative banners.
 # A run of pure box-art / rule characters (no letters or digits at all).
 _BANNER_CHARS = re.compile(r"^[\s#=*_~.\-–—•·░▒▓█|]+$")
@@ -88,6 +100,60 @@ def _within_quotes(text: str, idx: int) -> bool:
     return any(s <= idx < e for s, e in (m.span() for m in _QUOTED.finditer(text)))
 
 
+# ------------------------------------------------------------------------- fix helpers
+
+# Leading whitespace plus an optional list marker — the point where a line's *content*
+# begins, which is what capitalisation should track after an edit.
+_CONTENT_START = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)?")
+_DOUBLE_SPACE = re.compile(r"[ \t]{2,}")
+_SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
+
+
+def _content_offset(text: str) -> int:
+    m = _CONTENT_START.match(text)
+    return m.end() if m else 0
+
+
+def _splice(text: str, start: int, end: int, replacement: str = "") -> str | None:
+    """Replace ``text[start:end]``, tidying the seam. ``None`` means "delete the line".
+
+    Removing a word leaves artefacts a naive splice would keep — a double space, a
+    space before the full stop, a now-lowercase sentence opener. Each is repaired here
+    so the fixed line reads as if it had been written that way.
+    """
+    merged = text[:start] + replacement + text[end:]
+    merged = _DOUBLE_SPACE.sub(" ", merged)
+    merged = _SPACE_BEFORE_PUNCT.sub(r"\1", merged)
+    merged = merged.rstrip()
+
+    if not re.search(r"[A-Za-z0-9]", merged):
+        # Whatever remains is punctuation or a bare list marker — the line only existed
+        # to carry the phrase we just removed.
+        return None
+
+    before = _content_offset(text)
+    if start <= before:
+        # Removing a leading clause can strand its punctuation: dropping "Needless to
+        # say" from "Needless to say, run the tests." would otherwise leave ", run …".
+        lead = _content_offset(merged)
+        rest = merged[lead:].lstrip(",;:").lstrip()
+        merged = merged[:lead] + rest
+
+    # Restore sentence case when the edit consumed the start of the line's content.
+    after = _content_offset(merged)
+    if start <= before and after < len(merged):
+        head = merged[after]
+        if head.islower() and text[before : before + 1].isupper():
+            merged = merged[:after] + head.upper() + merged[after + 1 :]
+    return merged
+
+
+def _line_edit(lineno: int, text: str, start: int, end: int, replacement: str = "") -> Edit:
+    """An :class:`Edit` replacing one line, or deleting it when nothing is left."""
+    fixed = _splice(text, start, end, replacement)
+    return Edit(lineno, lineno, () if fixed is None else (fixed,))
+
+
 # ----------------------------------------------------------------------- PP301
 
 @register
@@ -104,21 +170,33 @@ class PolitenessPadding(Rule):
     def check(self, doc: Document, ctx: Context) -> Iterable[Finding]:
         if ctx.threshold("economy.allow_politeness", False):
             return
+        fenced = doc.fenced_lines()
         for lineno, text in doc.body_lines():
             if not text.strip() or text.lstrip().startswith(">"):
                 continue  # blockquotes are usually quoted copy, not directives
+            if lineno in fenced:
+                # A fenced block is sample text, a transcript, or code the author is
+                # showing — not an instruction addressed to the model.
+                continue
             m = _POLITENESS.search(text)
             if not m:
                 continue
             if _within_quotes(text, m.start()):
                 continue  # courtesy word sits inside quoted UX copy the model emits
             snippet = m.group(0)
+            # Consume one adjoining space so "Please write" becomes "Write", not " write".
+            start, end = m.span()
+            if end < len(text) and text[end] == " ":
+                end += 1
+            elif start > 0 and text[start - 1] == " ":
+                start -= 1
             yield self.finding(
                 doc,
                 f"politeness padding: \"{snippet}\" — models don't need courtesy",
                 line=lineno,
                 col=col_of(text, m),
                 hint="drop it; imperatives are clearer to models",
+                fix=_line_edit(lineno, text, start, end),
             )
 
 
@@ -136,9 +214,12 @@ class FillerPhrase(Rule):
     )
 
     def check(self, doc: Document, ctx: Context) -> Iterable[Finding]:
+        fenced = doc.fenced_lines()
         for lineno, text in doc.body_lines():
             if not text.strip():
                 continue
+            if lineno in fenced:
+                continue  # sample text, not prose addressed to the model
             m = _FILLER.search(text)
             if not m:
                 continue
@@ -151,12 +232,20 @@ class FillerPhrase(Rule):
                     if key in phrase:
                         rewrite = val
                         break
+            replacement = _FILLER_REPLACEMENT.get(phrase)
+            fix = None
+            if replacement is not None:
+                start, end = m.span()
+                if not replacement and end < len(text) and text[end] == " ":
+                    end += 1  # drop the phrase and its trailing space together
+                fix = _line_edit(lineno, text, start, end, replacement)
             yield self.finding(
                 doc,
                 f"filler phrase: \"{m.group(0)}\"",
                 line=lineno,
                 col=col_of(text, m),
                 hint=rewrite or "shorten or drop it",
+                fix=fix,
             )
 
 
@@ -316,6 +405,8 @@ class DecorativeBanner(Rule):
                 line=lineno,
                 col=col_of(text, stripped),
                 hint="remove decorative banners; they waste tokens",
+                # The whole line is decoration, so the repair is to delete it outright.
+                fix=Edit(lineno, lineno, ()),
             )
 
     @staticmethod
