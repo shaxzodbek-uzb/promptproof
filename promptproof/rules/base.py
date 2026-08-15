@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ..document import DocKind, Document
-from ..finding import Finding, Location, Severity
+from ..finding import Edit, Finding, Location, Severity
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -62,6 +62,7 @@ class Rule(abc.ABC):
         end_line: int | None = None,
         hint: str | None = None,
         severity: Severity | None = None,
+        fix: Edit | None = None,
     ) -> Finding:
         return Finding(
             rule=self.meta.id,
@@ -70,6 +71,7 @@ class Rule(abc.ABC):
             message=message,
             location=Location(doc.path, line, col, end_line),
             hint=hint,
+            fix=fix,
         )
 
 
