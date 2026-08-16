@@ -1,5 +1,9 @@
 # promptproof
 
+[![PyPI](https://img.shields.io/pypi/v/promptproof.svg)](https://pypi.org/project/promptproof/)
+[![Python](https://img.shields.io/pypi/pyversions/promptproof.svg)](https://pypi.org/project/promptproof/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **A fast, deterministic, zero-API linter for the prompt files your agent depends on.**
 
 `SKILL.md` files, Claude Code sub-agents, MCP tool descriptions, slash-command
