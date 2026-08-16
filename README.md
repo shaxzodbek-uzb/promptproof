@@ -191,7 +191,7 @@ ignore previous instructions   # intentional red-team fixture
 GitHub Action (`action.yml`):
 
 ```yaml
-- uses: shaxzodbek-uzb/promptproof@v0.1.0
+- uses: shaxzodbek-uzb/promptproof@v0.2.0
   with:
     paths: .claude
     fail-level: warning
@@ -201,7 +201,7 @@ pre-commit:
 
 ```yaml
 - repo: https://github.com/shaxzodbek-uzb/promptproof
-  rev: v0.1.0
+  rev: v0.2.0
   hooks:
     - id: promptproof
 ```
