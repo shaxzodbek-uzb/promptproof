@@ -6,6 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-16
+
+### Added
+
+- **`--fix`** — apply the fixes promptproof already knows how to make, in place.
+  A finding now carries an optional `Edit`, and the fixer applies them
+  bottom-up so line numbers stay valid, skipping any pair that overlaps.
+  Re-linting runs up to `MAX_PASSES` (5) times, so a fix that exposes another
+  finding still converges instead of spinning.
+- **`--diff`** — print the unified diff instead of writing, to see exactly what
+  `--fix` would change.
+- **`--baseline` / `--write-baseline`** — record today's findings and report only
+  what is new, so promptproof can be adopted on a large existing prompt tree
+  without a thousand-line first run. Fingerprints are keyed on the *content* of
+  the offending line rather than its number, so moving a block around the file
+  does not resurface every finding in it; counts are tracked per key, so
+  duplicating an already-baselined line is still reported.
+
+### Fixed
+
+- **PP301 and PP302 rewrote text inside fenced code blocks.** A prompt containing
+  a fenced example of bad wording had the example itself edited, corrupting the
+  block. Both rules now skip fenced lines.
+- Removing courtesy filler could strand leading punctuation — "Needless to say,
+  run the tests." became ", run the tests." The fixer now cleans up the seam.
+
+### Changed
+
+- Severity overrides rebuild findings via `dataclasses.replace`, so a `Finding`
+  keeps its `fix` when its severity is overridden in config.
+
+## [0.1.0] - 2026-06-20
+
 ### Added
 
 - Initial release of `promptproof` — a fast, deterministic, **zero-API** linter for AI

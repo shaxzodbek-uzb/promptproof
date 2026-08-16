@@ -15,7 +15,7 @@ from .reporters import render
 from .rules import all_rules, get_rule
 from .tokens import estimate_tokens
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Severity",
