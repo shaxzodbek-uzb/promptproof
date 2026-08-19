@@ -26,6 +26,10 @@ $ promptproof .claude/
 0 errors, 3 warnings, 0 info  ·  0 API calls  ·  6ms
 ```
 
+<p align="center">
+  <img src="docs/demo.svg" alt="promptproof linting a SKILL.md with zero API calls in one millisecond" width="860">
+</p>
+
 ---
 
 ## Why another prompt linter?
